@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }}</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: Arial, "Microsoft YaHei", sans-serif;
+        background: #f4f6f8;
+        color: #17202a;
+      }
+
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; background: #f4f6f8; }
+      header { border-bottom: 1px solid #d8dee6; background: #fff; }
+      .header-inner { width: min(1360px, calc(100% - 32px)); margin: 0 auto; padding: 18px 0; }
+      h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 0; }
+      .test-nav { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 16px; }
+      .test-nav a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 32px;
+        padding: 0 10px;
+        border: 1px solid #c8d1dc;
+        border-radius: 6px;
+        color: #26313d;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 700;
+        background: #fff;
+      }
+      .test-nav a.active { border-color: #167a3a; color: #167a3a; background: #eef8f1; }
+
+      main {
+        width: min(1360px, calc(100% - 32px));
+        margin: 24px auto;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 460px;
+        gap: 20px;
+        align-items: start;
+      }
+
+      .video-panel,
+      .status-panel {
+        background: #fff;
+        border: 1px solid #d8dee6;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .video-frame {
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        background: #111820;
+        display: block;
+        object-fit: contain;
+      }
+
+      .panel-title {
+        margin: 0;
+        padding: 14px 16px;
+        border-bottom: 1px solid #e2e7ee;
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .status-list { padding: 6px 16px 16px; }
+      .metric {
+        min-height: 40px;
+        display: grid;
+        grid-template-columns: 150px minmax(0, 1fr);
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid #edf1f5;
+      }
+      .label { color: #5b6674; font-size: 14px; }
+      .value { min-width: 0; font-size: 15px; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+      .ok { color: #167a3a; }
+      .no { color: #b42318; }
+      .warn { color: #986600; }
+
+      .message {
+        margin-top: 12px;
+        padding: 12px;
+        border-radius: 6px;
+        background: #f7f9fb;
+        color: #3d4652;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .progress { display: grid; gap: 6px; }
+      .progress-text { font-size: 13px; font-weight: 700; text-align: right; }
+      .progress-track { width: 100%; height: 10px; border-radius: 999px; background: #dfe5ec; overflow: hidden; }
+      .progress-fill { width: 0%; height: 100%; background: #167a3a; transition: width 120ms linear; }
+      .progress-fill.lost { background: #d97706; }
+
+      .scores,
+      .debug { margin-top: 14px; border-top: 1px solid #e2e7ee; }
+      .scores .metric,
+      .debug .metric { min-height: 36px; }
+      .scores .label,
+      .scores .value,
+      .debug .label,
+      .debug .value { font-size: 13px; }
+      .hand-debug {
+        padding: 8px 0;
+        display: grid;
+        gap: 8px;
+      }
+      .hand-row {
+        padding: 8px 10px;
+        border: 1px solid #edf1f5;
+        border-radius: 6px;
+        background: #fafbfd;
+        font-size: 12px;
+        line-height: 1.55;
+      }
+      .hand-row strong { font-size: 13px; }
+      .camera-control {
+        margin-top: 10px;
+        padding: 10px;
+        border: 1px solid #edf1f5;
+        border-radius: 6px;
+        background: #fafbfd;
+        display: grid;
+        gap: 8px;
+      }
+      .control-line {
+        display: grid;
+        grid-template-columns: 90px minmax(0, 1fr) 56px;
+        gap: 8px;
+        align-items: center;
+        font-size: 13px;
+      }
+      .control-line input[type="range"] { width: 100%; }
+      .control-check {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: #3d4652;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .control-button {
+        min-height: 30px;
+        border: 1px solid #167a3a;
+        border-radius: 6px;
+        background: #eef8f1;
+        color: #167a3a;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      @media (max-width: 960px) {
+        main { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="header-inner">
+        <h1>CIC 吊运手号识别 Demo</h1>
+        <nav class="test-nav" aria-label="单手势测试入口">
+          <a href="/" class="{{ 'active' if not target_code else '' }}">全手势识别</a>
+          {% for item in test_options %}
+          <a href="/?target={{ item.code }}" class="{{ 'active' if target_code == item.code else '' }}">{{ item.label }}</a>
+          {% endfor %}
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="video-panel" aria-label="摄像头画面">
+        <img id="video-feed" class="video-frame" src="/video_feed{% if target_code %}?target={{ target_code }}{% endif %}" alt="实时手号识别画面">
+      </section>
+
+      <aside class="status-panel" aria-label="识别结果">
+        <h2 class="panel-title">识别结果</h2>
+        <div class="status-list">
+          <div class="metric">
+            <span class="label">测试模式</span>
+            <span id="target-gesture" class="value">全手势识别</span>
+          </div>
+          <div class="metric">
+            <span class="label">候选手号</span>
+            <span id="candidate-gesture" class="value no">未识别</span>
+          </div>
+          <div class="metric">
+            <span class="label">已确认手号</span>
+            <span id="confirmed-gesture" class="value no">未确认</span>
+          </div>
+          <div class="metric">
+            <span class="label">最终判断</span>
+            <span id="result" class="value no">NO</span>
+          </div>
+          <div class="metric">
+            <span class="label">综合分数</span>
+            <span id="match-score" class="value">0.00</span>
+          </div>
+          <div class="metric">
+            <span class="label">正确保持时间</span>
+            <div class="progress">
+              <span id="good-duration" class="progress-text">0.00 秒 / 0.50 秒</span>
+              <div class="progress-track"><div id="hold-progress" class="progress-fill"></div></div>
+            </div>
+          </div>
+          <div class="metric">
+            <span class="label">丢失容忍时间</span>
+            <div class="progress">
+              <span id="lost-duration" class="progress-text">0.00 秒 / 1.00 秒</span>
+              <div class="progress-track"><div id="lost-progress" class="progress-fill lost"></div></div>
+            </div>
+          </div>
+          <div id="reason" class="message">正在启动摄像头...</div>
+
+          <div class="scores">
+            <h2 class="panel-title">手势分数</h2>
+            <div id="gesture-scores"></div>
+          </div>
+
+          <div class="debug">
+            <h2 class="panel-title">STOP / 调参 Debug</h2>
+            <div class="metric"><span class="label">水平手臂</span><span id="signal-arm-label" class="value">未确定</span></div>
+            <div class="metric"><span class="label">掌心手</span><span id="detected-palm-label" class="value">未确定</span></div>
+            <div class="metric"><span class="label">是否双手配合</span><span id="different-hands-ok" class="value no">未通过</span></div>
+            <div class="metric"><span class="label">手臂伸出</span><span id="arm-extended" class="value no">未通过</span></div>
+            <div class="metric"><span class="label">手臂水平</span><span id="arm-horizontal" class="value no">未通过</span></div>
+            <div class="metric"><span class="label">手掌状态</span><span id="palm-visible" class="value no">未识别</span></div>
+            <div class="metric"><span class="label">手腕匹配</span><span id="wrist-match" class="value no">未通过</span></div>
+            <div class="metric"><span class="label">Same Hand Rejected</span><span id="same-hand-rejected" class="value no">False</span></div>
+            <div class="metric"><span class="label">Arm Score</span><span id="arm-score" class="value">0.00</span></div>
+            <div class="metric"><span class="label">Palm Score</span><span id="palm-score" class="value">0.00</span></div>
+            <div class="metric"><span class="label">Arm Angle</span><span id="arm-angle" class="value">-</span></div>
+            <div class="metric"><span class="label">Wrist-Shoulder Y Diff</span><span id="wrist-shoulder-y-diff" class="value">-</span></div>
+            <div class="metric"><span class="label">Wrist Match Distance</span><span id="wrist-match-distance" class="value">-</span></div>
+            <div class="metric"><span class="label">Raw OK</span><span id="raw-ok" class="value no">False</span></div>
+            <div class="metric"><span class="label">Confirmed Any</span><span id="confirmed-any" class="value no">False</span></div>
+            <div class="metric"><span class="label">摄像头分辨率</span><span id="camera-resolution" class="value">-</span></div>
+            <div class="metric"><span class="label">摄像头 FPS</span><span id="camera-fps" class="value">-</span></div>
+            <div class="metric"><span class="label">使用后端</span><span id="camera-backend" class="value">-</span></div>
+            <div class="metric"><span class="label">MJPG</span><span id="camera-mjpg" class="value">-</span></div>
+            <div class="metric"><span class="label">ROI</span><span id="roi" class="value">-</span></div>
+            <div class="metric"><span class="label">图像增强</span><span id="image-enhancement" class="value">-</span></div>
+            <div class="metric"><span class="label">平均亮度</span><span id="mean-luma" class="value">-</span></div>
+            <div class="metric"><span class="label">过曝比例</span><span id="overexposed-ratio" class="value">-</span></div>
+            <div class="metric"><span class="label">过曝提示</span><span id="overexposed" class="value no">正常</span></div>
+            <div class="metric"><span class="label">处理耗时</span><span id="process-ms" class="value">-</span></div>
+            <div class="metric"><span class="label">当前曝光/快门</span><span id="camera-exposure" class="value">-</span></div>
+            <div class="metric"><span class="label">曝光模式</span><span id="camera-auto-exposure" class="value">-</span></div>
+            <div class="camera-control">
+              <label class="control-check">
+                <input id="auto-exposure" type="checkbox">
+                自动曝光
+              </label>
+              <div class="control-line">
+                <span>曝光值</span>
+                <input id="exposure-slider" type="range" min="-13" max="0" step="0.5" value="-6">
+                <span id="exposure-value">-6.0</span>
+              </div>
+              <button id="apply-exposure" class="control-button" type="button">应用曝光</button>
+            </div>
+            <h2 class="panel-title">手部细节 Debug</h2>
+            <div id="hands-debug" class="hand-debug"></div>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <script>
+      const targetCode = "{{ target_code }}";
+      const statusUrl = targetCode
+        ? `/status?target=${encodeURIComponent(targetCode)}`
+        : "/status";
+      const controlUrl = "/camera_control";
+      let exposureTouched = false;
+
+      const setPass = (id, ok, yesText = "通过", noText = "未通过") => {
+        const el = document.getElementById(id);
+        el.textContent = ok ? yesText : noText;
+        el.className = `value ${ok ? "ok" : "no"}`;
+      };
+
+      const setBool = (id, ok) => {
+        const el = document.getElementById(id);
+        el.textContent = ok ? "True" : "False";
+        el.className = `value ${ok ? "ok" : "no"}`;
+      };
+
+      const valueOrDash = (value, digits = 2) =>
+        value === null || value === undefined ? "-" : Number(value).toFixed(digits);
+
+      const renderScores = (scores) => {
+        const container = document.getElementById("gesture-scores");
+        container.innerHTML = "";
+        (scores || []).forEach((item) => {
+          const row = document.createElement("div");
+          row.className = "metric";
+          const label = document.createElement("span");
+          label.className = "label";
+          label.textContent = item.label || item.code || "-";
+          const value = document.createElement("span");
+          value.className = `value ${item.ok ? "ok" : "no"}`;
+          value.textContent = `${Number(item.score || 0).toFixed(2)} ${item.ok ? "通过" : "未通过"}`;
+          row.append(label, value);
+          container.append(row);
+        });
+      };
+
+      const renderHandsDebug = (hands) => {
+        const container = document.getElementById("hands-debug");
+        container.innerHTML = "";
+        if (!hands || hands.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "hand-row";
+          empty.textContent = "暂未检测到稳定手部关键点";
+          container.append(empty);
+          return;
+        }
+        hands.forEach((hand) => {
+          const row = document.createElement("div");
+          row.className = "hand-row";
+          row.innerHTML = `
+            <strong>${hand.label || "未确定"} · ${hand.source || "-"}</strong><br>
+            Palm ${Number(hand.palm_score || 0).toFixed(2)}
+            / ThumbUp ${Number(hand.thumb_up_score || 0).toFixed(2)}
+            / IndexUp ${Number(hand.index_up_score || 0).toFixed(2)}
+            / IndexDown ${Number(hand.index_down_score || 0).toFixed(2)}<br>
+            Motion ${Number(hand.motion_score || 0).toFixed(2)}
+            / Path ${Number(hand.motion_path || 0).toFixed(3)}
+            / Range ${Number(hand.motion_range || 0).toFixed(3)}
+            / Turns ${hand.direction_changes || 0}
+          `;
+          container.append(row);
+        });
+      };
+
+      const renderExposureControl = (data) => {
+        const slider = document.getElementById("exposure-slider");
+        const value = document.getElementById("exposure-value");
+        const auto = document.getElementById("auto-exposure");
+        slider.min = data.exposure_min ?? -13;
+        slider.max = data.exposure_max ?? 0;
+        slider.step = data.exposure_step ?? 0.5;
+
+        if (!exposureTouched) {
+          slider.value = Number(data.exposure_requested ?? -6).toFixed(1);
+          value.textContent = Number(slider.value).toFixed(1);
+          auto.checked = Boolean(data.exposure_auto_requested);
+          slider.disabled = auto.checked;
+        }
+      };
+
+      const applyExposureControl = async () => {
+        const slider = document.getElementById("exposure-slider");
+        const auto = document.getElementById("auto-exposure");
+        await fetch(controlUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            auto_exposure: auto.checked,
+            exposure: Number(slider.value),
+          }),
+        });
+        exposureTouched = false;
+      };
+
+      const updateStatus = async () => {
+        try {
+          const response = await fetch(statusUrl, { cache: "no-store" });
+          const data = await response.json();
+
+          document.getElementById("target-gesture").textContent =
+            data.target_gesture || "全手势识别";
+
+          const candidate = document.getElementById("candidate-gesture");
+          candidate.textContent = data.candidate_gesture || "未识别";
+          candidate.className = `value ${data.raw_ok ? "ok" : "no"}`;
+
+          const confirmed = document.getElementById("confirmed-gesture");
+          confirmed.textContent = data.confirmed_gesture || "未确认";
+          confirmed.className = `value ${data.result ? "ok" : "no"}`;
+
+          const result = document.getElementById("result");
+          result.textContent = data.result ? "YES" : "NO";
+          result.className = `value ${data.result ? "ok" : "no"}`;
+
+          document.getElementById("match-score").textContent = Number(data.match_score || 0).toFixed(2);
+          const holdSeconds = Number(data.hold_seconds || 0.5);
+          const lostSeconds = Number(data.lost_seconds_before_no || 1.0);
+          document.getElementById("good-duration").textContent =
+            `${Number(data.good_duration || 0).toFixed(2)} 秒 / ${holdSeconds.toFixed(2)} 秒`;
+          document.getElementById("lost-duration").textContent =
+            `${Number(data.lost_duration || 0).toFixed(2)} 秒 / ${lostSeconds.toFixed(2)} 秒`;
+          document.getElementById("hold-progress").style.width =
+            `${Math.round((data.hold_progress || 0) * 100)}%`;
+          document.getElementById("lost-progress").style.width =
+            `${Math.round((data.lost_progress || 0) * 100)}%`;
+          document.getElementById("reason").textContent = data.current_reason || data.reason || "等待识别...";
+
+          renderScores(data.gesture_scores);
+
+          document.getElementById("signal-arm-label").textContent = data.signal_arm_label || "未确定";
+          document.getElementById("detected-palm-label").textContent = data.detected_palm_label || "未确定";
+          setPass("different-hands-ok", data.different_hands_ok);
+          setPass("arm-extended", data.arm_extended);
+          setPass("arm-horizontal", data.arm_horizontal);
+          setPass("palm-visible", data.palm_visible, "掌心可见", "未识别");
+          setPass("wrist-match", data.wrist_match);
+          setBool("same-hand-rejected", data.same_hand_rejected);
+          document.getElementById("arm-score").textContent = Number(data.arm_score || 0).toFixed(2);
+          document.getElementById("palm-score").textContent = Number(data.palm_score || 0).toFixed(2);
+          document.getElementById("arm-angle").textContent = valueOrDash(data.arm_angle, 1);
+          document.getElementById("wrist-shoulder-y-diff").textContent =
+            valueOrDash(data.wrist_shoulder_y_diff, 3);
+          document.getElementById("wrist-match-distance").textContent =
+            valueOrDash(data.wrist_match_distance, 3);
+          setBool("raw-ok", data.raw_ok);
+          setBool("confirmed-any", data.confirmed_any);
+
+          const resolution = data.camera_width && data.camera_height
+            ? `${data.camera_width} x ${data.camera_height}`
+            : "-";
+          document.getElementById("camera-resolution").textContent = resolution;
+          document.getElementById("camera-fps").textContent = valueOrDash(data.camera_fps, 1);
+          document.getElementById("camera-backend").textContent = data.camera_backend || "-";
+          document.getElementById("camera-mjpg").textContent =
+            data.camera_mjpg ? `成功 (${data.camera_fourcc || "MJPG"})` : `未确认 (${data.camera_fourcc || "-"})`;
+          document.getElementById("roi").textContent = data.roi_enabled ? `启用 ${data.roi_size}px` : "未启用";
+          document.getElementById("image-enhancement").textContent = data.image_enhancement ? "启用" : "未启用";
+          document.getElementById("mean-luma").textContent = valueOrDash(data.mean_luma, 1);
+          document.getElementById("overexposed-ratio").textContent =
+            `${Number((data.overexposed_ratio || 0) * 100).toFixed(1)}%`;
+          const overexposed = document.getElementById("overexposed");
+          overexposed.textContent = data.overexposed ? "背景过曝，建议避开强光" : "正常";
+          overexposed.className = `value ${data.overexposed ? "warn" : "ok"}`;
+          document.getElementById("process-ms").textContent = `${valueOrDash(data.process_ms, 1)} ms`;
+          document.getElementById("camera-exposure").textContent = valueOrDash(data.camera_exposure, 2);
+          document.getElementById("camera-auto-exposure").textContent =
+            data.exposure_auto_requested ? `自动 (${valueOrDash(data.camera_auto_exposure, 2)})` : `手动 (${valueOrDash(data.camera_auto_exposure, 2)})`;
+          renderExposureControl(data);
+          renderHandsDebug(data.hands_debug);
+        } catch (error) {
+          document.getElementById("reason").textContent = "等待本地 Flask 服务...";
+        }
+      };
+
+      document.getElementById("exposure-slider").addEventListener("input", (event) => {
+        exposureTouched = true;
+        document.getElementById("exposure-value").textContent = Number(event.target.value).toFixed(1);
+      });
+      document.getElementById("auto-exposure").addEventListener("change", (event) => {
+        exposureTouched = true;
+        document.getElementById("exposure-slider").disabled = event.target.checked;
+      });
+      document.getElementById("apply-exposure").addEventListener("click", applyExposureControl);
+
+      updateStatus();
+      window.setInterval(updateStatus, 250);
+    </script>
+  </body>
+</html>
